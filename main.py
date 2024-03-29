@@ -1,5 +1,6 @@
 import argparse
 import logging
+import threading
 from docker_manager import run_container, get_docker_client
 from cloudwatch_manager import setup_cloudwatch_logging
 from utilities import handle_error
@@ -25,11 +26,15 @@ def parse_arguments():
 
 # Main function
 def main():
+    """Main function to run the container and setup CloudWatch logging."""
     args = parse_arguments()
     container = None
     try:
         container = run_container(args.docker_image, args.bash_command)
-        setup_cloudwatch_logging(container, args)
+        # Start the CloudWatch logging setup in a separate thread to allow concurrent execution.
+        logging_thread = threading.Thread(target=setup_cloudwatch_logging, args=(container, args))
+        logging_thread.start()
+        logging_thread.join()  # Optional: Use join() if you want to wait for the logging thread to finish.
     except Exception as e:
         logging.error("An error occurred:", exc_info=True)
     finally:
