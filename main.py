@@ -34,11 +34,14 @@ def main():
         # Start the CloudWatch logging setup in a separate thread to allow concurrent execution.
         logging_thread = threading.Thread(target=setup_cloudwatch_logging, args=(container, args))
         logging_thread.start()
-        logging_thread.join()  # Optional: Use join() if you want to wait for the logging thread to finish.
+        # Removed join here to not block the main thread; logs and container will run concurrently.
     except Exception as e:
         logging.error("An error occurred:", exc_info=True)
     finally:
         if container:
+            # Optionally wait for the logging to finish before removing the container.
+            # This would ensure all logs are sent before cleanup.
+            logging_thread.join()  # Wait for the logging thread to finish if it was successfully started.
             try:
                 logging.info(f"Attempting to remove container {container.id} due to cleanup...")
                 docker_client = get_docker_client()
@@ -46,7 +49,6 @@ def main():
                 logging.info(f"Container {container.id} successfully removed.")
             except Exception as cleanup_error:
                 logging.error("Failed to remove container:", exc_info=True)
-
 
 if __name__ == "__main__":
     main()
